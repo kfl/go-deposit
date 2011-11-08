@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Drop box for Advanced Programming, E2011</title>
+  <link rel="stylesheet" type="text/css" href="/style.css" />
+</head>
+<body>
+<div id="content">
+      {{with .Name}}
+        <h1>Thank you {{html .}}</h1>
+      {{else}}
+        <h1>Anonymous student</h1>
+      {{end}}
+      <p>Your upload got the time-stamp: {{.Time|html}}.</p>
+      <p>It is saved under the key: {{.Key|html}}.</p>
+</div>
+</body>
+</html>

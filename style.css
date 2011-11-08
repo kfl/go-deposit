@@ -1,0 +1,100 @@
+html, body, h1, form, fieldset, legend, ol, li {
+   margin: 0;
+   padding: 0;
+}
+
+body {
+   background: #901A1E;
+   color: #111111;
+   font-family: Georgia, "Times New Roman", Times, serif;
+   margin: 10px 0px;
+   text-align:center;
+}
+
+div#content {
+   width: 750px;
+   background: #FFFFFF;
+   padding: 20px;
+   margin:0px auto;
+   text-align:left;
+   -moz-border-radius: 10px;
+   -webkit-border-radius: 10px;
+   border-radius: 10px;
+}
+
+form#upload {
+   background: #666666;
+   -moz-border-radius: 5px;
+   -webkit-border-radius: 5px;
+   border-radius: 5px;
+   padding: 20px;
+   width: 580px;
+}
+
+form#upload ol li {
+   background: #901A1E;
+   background: rgba(255,255,255,.3);
+   border-color: #901A1E;
+   border-color: rgba(255,255,255,.6);
+   border-style: solid;
+   border-width: 2px;
+   -moz-border-radius: 5px;
+   -webkit-border-radius: 5px;
+   border-radius: 5px;
+   line-height: 30px;
+   list-style: none;
+   padding: 5px 10px;
+   margin-bottom: 2px;
+}
+
+form#upload ol ol li {
+   background: none;
+   border: none;
+   float: left;
+}
+
+form#upload label {
+   float: left;
+   margin-right: 5px;
+   width: 240px;
+   text-align: right;
+}
+
+form#upload input, form#upload textarea {
+   background: #ffffff;
+   border: none;
+   -moz-border-radius: 3px;
+   -webkit-border-radius: 3px;
+   -khtml-border-radius: 3px;
+   border-radius: 3px;
+   font: Georgia, "Times New Roman", Times, serif;
+   font-style: italic;
+   outline: none;
+   padding: 5px;
+   width: 300px;
+}
+ 
+form#upload input:not([type=submit]):focus, form#upload textarea:focus {
+   background: #eaeaea;
+}
+
+form#upload button {
+   background: #111111;
+   border: none;
+   -moz-border-radius: 20px;
+   -webkit-border-radius: 20px;
+   -khtml-border-radius: 20px;
+   border-radius: 20px;
+   color: #ffffff;
+   display: block;
+   font: 18px Georgia, "Times New Roman", Times, serif;
+   letter-spacing: 1px;
+   margin: auto;
+   padding: 7px 25px;
+   text-shadow: 0 1px 1px #000000;
+}
+
+form#upload button:hover {
+   background: #333333;
+   cursor: pointer;
+}

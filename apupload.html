@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Drop box for Advanced Programming, E2011</title>
+  <link rel="stylesheet" type="text/css" href="/style.css" />
+</head>
+<body>
+<div id="content">
+  <h1>Drop box for Advanced Programming, E2011</h1>
+
+  <p>In the event that Absalon becomes unstable, or you have trouble
+    uploading your hand-in on Absalon. You can upload a backup here, to
+    be sure that your hand-in is registered as handed in timely.
+  </p>
+    
+  
+  <form id="upload" action="/" method="POST" enctype="multipart/form-data">
+    <ol>
+      <li>
+	<label for="name">Name:</label>
+	<input id="name" name="name" type="text" 
+	       placeholder="First and last name" required>
+      </li>
+      <li>
+	<label for="kuemail">Your KU email:</label>
+	<input id="kuemail" name="kuemail" type="email" 
+	       placeholder="username@alumni.ku.dk" required>
+      </li>
+      <li>
+	<label for="comments">Comments:</label>
+	<textarea id="comments" name="comments" rows="7"></textarea>
+      </li>
+      <li>
+	<label for="pdffile">PDF file with report:</label>
+	<input type="file" name="pdffile">
+      </li>
+      <li>
+	<label for="zipfile">ZIP file with source code
+	  (in <code>src</code>):</label>
+	<input type="file" name="zipfile">
+      </li>
+    </ol>
+    <button type="submit">Upload</button>
+  </form>
+</div>
+</body>
+</html>
