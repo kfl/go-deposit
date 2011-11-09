@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Drop box for Advanced Programming, E2011</title>
+  <link rel="stylesheet" type="text/css" href="/style.css" />
+</head>
+<body>
+<div id="content">
+  <h1>Admin interface for AP Drop box</h1>
+ 
+  <h4>Uploads</h4>
+  <ul>
+    {{range .}}
+    <li class="upload">
+      <span>{{.Name | html}}</span>
+      <span><tt>{{.Email | html}}</tt></span>
+      <span>{{.Time}}</span>
+      <a href={{.Key | printf "/upload/%s" | printf "%q"}}>{{.Key}}</a>
+    </li>
+    {{else}}
+    <li> No uploads
+    {{end}}
+  </ul>
+  
+<hr/>
+<address>Ken Friis Larsen (<a href="mailto:kflarsen@diku.dk">kflarsen@diku.dk</a>)</address>
+</div>
+</body>
+</html>

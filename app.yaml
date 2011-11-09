@@ -9,5 +9,9 @@ handlers:
   static_files: style.css
   upload: style\.css
 
+- url: /admin/.*
+  script: _go_app
+  login: admin
+
 - url: /.*
   script: _go_app

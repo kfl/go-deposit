@@ -2,6 +2,7 @@
 package deposit
 
 import (
+	"archive/zip"
         "bytes"
         "crypto/sha1"
         "fmt"
@@ -10,22 +11,29 @@ import (
         "os"
         "template"
         "time"
+//	"strconv"
+	"strings"
 )
 
 // These imports were added for deployment on App Engine.
 import (
         "appengine"
         "appengine/datastore"
+        "appengine/user"
 )
 
 var (
         uploadTemplate = template.Must(template.ParseFile("apupload.html"))
         viewTemplate   = template.Must(template.ParseFile("singleupload.html"))
+        adminTemplate  = template.Must(template.ParseFile("admin.html"))
         errorTemplate  = template.Must(template.ParseFile("error.html"))
 )
 
+const viewPath = "/upload/"
+
 func init() {
         http.HandleFunc("/", errorHandler(upload))
+        http.HandleFunc("/admin/", errorHandler(admin))
         http.HandleFunc(viewPath, errorHandler(showupload))
 }
 
@@ -99,9 +107,6 @@ func keyOf(up *Upload) string {
         return fmt.Sprintf("%x", string(sha.Sum())[0:10])
 }
 
-const viewPath = "/upload/"
-
-
 // showupload is the HTTP handler for a single upload; it handles "/upload/".
 func showupload(w http.ResponseWriter, r *http.Request) {
         keystring := r.URL.Path[len(viewPath):]
@@ -114,11 +119,80 @@ func showupload(w http.ResponseWriter, r *http.Request) {
         m := map[string]interface{}{
 		"Name": up.Name, 
 		"Time": up.Timestamp.Time().Format(time.RFC850), 
-		"Key": keystring}
+		"Key": keystring,
+	}
 
         err = viewTemplate.Execute(w, m);
         check(err)
 }
+
+func admin(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	u := user.Current(c)
+	if u == nil {
+		url, err := user.LoginURL(c, r.URL.String())
+		check(err)
+		w.Header().Set("Location", url)
+		w.WriteHeader(http.StatusFound)
+		return
+	}
+        pathstring := r.URL.Path[len("/admin/"):]
+	q := datastore.NewQuery("Upload").Order("Timestamp").Order("KUemail")
+
+	if strings.HasPrefix(pathstring, "download.zip") {
+		buf := new(bytes.Buffer)
+		zw := zip.NewWriter(buf)
+		var up Upload
+
+		results := q.Run(c)
+		for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up){
+			name := strings.Replace(up.Name," ","_", -1)
+			name = strings.Replace(name,"/","+", -1)
+			name = name + "_" + key.StringID()+"/"
+
+			fw, ferr := zw.Create(name+"comments.txt")
+			check(ferr)
+			io.WriteString(fw, up.Comments)
+
+			fw, ferr = zw.Create(name+"report.pdf")
+			check(ferr)
+			fw.Write(up.PdfFile)
+
+			fw, ferr = zw.Create(name+"src.zip")
+			check(ferr)
+			fw.Write(up.SrcZip)
+			//dw.Close()
+		}
+		zw.Close()
+		w.Header().Set("Content-Type", "application/zip")
+//		w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
+
+		io.Copy(w, buf)
+		return
+	}
+
+	// var ups []*Upload
+	// _, err := q.GetAll(c, &ups)
+	// check(err)
+	
+	var uploads [] map[string]interface{}
+	var up Upload
+
+	results := q.Run(c)
+	for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up){
+		m := map[string]interface{}{
+			"Name": up.Name, 
+			"Time": up.Timestamp.Time().Format(time.RFC822), 
+			"Email": up.KUemail,
+			"Key": key.StringID(),
+		}
+		uploads = append(uploads, m)
+	}
+
+        err := adminTemplate.Execute(w, uploads);
+        check(err)
+}
+
 
 // errorHandler wraps the argument handler with an error-catcher that
 // returns a 500 HTTP error if the request fails (calls check with err non-nil).
