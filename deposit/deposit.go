@@ -139,9 +139,10 @@ func admin(w http.ResponseWriter, r *http.Request) {
         pathstring := r.URL.Path[len("/admin/"):]
 	q := datastore.NewQuery("Upload").Order("Timestamp").Order("KUemail")
 
-	if strings.HasPrefix(pathstring, "download.zip") {
-		buf := new(bytes.Buffer)
-		zw := zip.NewWriter(buf)
+	if strings.HasPrefix(pathstring, "download") {
+		w.Header().Set("Content-Type", "application/zip")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"uploads.zip\"")
+		zw := zip.NewWriter(w)
 		var up Upload
 
 		results := q.Run(c)
@@ -164,10 +165,6 @@ func admin(w http.ResponseWriter, r *http.Request) {
 			//dw.Close()
 		}
 		zw.Close()
-		w.Header().Set("Content-Type", "application/zip")
-//		w.Header().Set("Content-Length", strconv.Itoa(buf.Len()))
-
-		io.Copy(w, buf)
 		return
 	}
 
