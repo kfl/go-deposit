@@ -142,18 +142,23 @@ func admin(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(pathstring, "download") {
 		w.Header().Set("Content-Type", "application/zip")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"uploads.zip\"")
+//		w.WriteHeader(http.StatusFound)
 		zw := zip.NewWriter(w)
 		var up Upload
 
 		results := q.Run(c)
 		for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up){
-			name := strings.Replace(up.Name," ","_", -1)
+			stamp := up.Timestamp.Time().Format(time.RFC3339)
+//			part := strings.SplitN(up.KUemail,"@",2)[0]
+			name := strings.Replace(up.Name+"_"+up.KUemail," ","_", -1)
 			name = strings.Replace(name,"/","+", -1)
-			name = name + "_" + key.StringID()+"/"
+
+			name = name+"/"+stamp+"_" + key.StringID()+"/"
 
 			fw, ferr := zw.Create(name+"comments.txt")
 			check(ferr)
 			io.WriteString(fw, up.Comments)
+			io.WriteString(fw, "\n\n"+up.Name+" ("+up.KUemail+")\n")
 
 			fw, ferr = zw.Create(name+"report.pdf")
 			check(ferr)
