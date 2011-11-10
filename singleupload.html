@@ -7,14 +7,11 @@
 </head>
 <body>
 <div id="content">
-      {{with .Name}}
-        <h1>Thank you {{html .}}</h1>
-      {{else}}
-        <h1>Anonymous student</h1>
-      {{end}}
-      <p>Your upload got the time-stamp: {{.Time|html}}.</p>
-      <p>It is saved under the key: {{.Key|html}}.</p>
-      <hr/>
+  <h1>File Uploaded</h1>
+
+  <p>Your upload got the time-stamp: {{.Time|html}}.</p>
+  <p>It is saved under the key: {{.Key|html}}.</p>
+  <hr/>
 <address>Ken Friis Larsen (<a href="mailto:kflarsen@diku.dk">kflarsen@diku.dk</a>)</address>
 </div>
 </body>

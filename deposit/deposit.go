@@ -20,6 +20,7 @@ import (
         "appengine"
         "appengine/datastore"
         "appengine/user"
+	"appengine/mail"
 )
 
 var (
@@ -91,6 +92,17 @@ func upload(w http.ResponseWriter, r *http.Request) {
         _, err = datastore.Put(c, key, &up)
         check(err)
 
+	url := "http://filenotary.appspot.com"+viewPath+key.StringID()
+	addr := r.FormValue("kuemail")
+        msg := &mail.Message{
+                Sender:  "Ken Friis Larsen <kflarsen@diku.edu>",
+                To:      []string{addr},
+                Subject: "You upload is registered with the File Notary",
+                Body:    fmt.Sprintf(uploadMessage, up.Name, url),
+        }
+	err = mail.Send(c, msg)
+	check(err)
+
         // Redirect to /upload/ using the key.
         http.Redirect(w, r, viewPath+key.StringID(), http.StatusFound)
 }
@@ -106,6 +118,18 @@ func keyOf(up *Upload) string {
         sha.Write(up.SrcZip)
         return fmt.Sprintf("%x", string(sha.Sum())[0:10])
 }
+
+const uploadMessage = `
+Thank you %s
+
+Your upload is now registered, you can see what is registred at:
+    %s
+
+Cheers,
+
+--Ken
+`
+
 
 // showupload is the HTTP handler for a single upload; it handles "/upload/".
 func showupload(w http.ResponseWriter, r *http.Request) {
