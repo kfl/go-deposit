@@ -35,6 +35,7 @@ const viewPath = "/upload/"
 func init() {
         http.HandleFunc("/", errorHandler(upload))
         http.HandleFunc("/admin/", errorHandler(admin))
+        http.HandleFunc("/admin/download", errorHandler(download))
         http.HandleFunc(viewPath, errorHandler(showupload))
 }
 
@@ -162,42 +163,7 @@ func admin(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusFound)
 		return
 	}
-        pathstring := r.URL.Path[len("/admin/"):]
 	q := datastore.NewQuery("Upload").Order("Timestamp").Order("KUemail")
-
-	if strings.HasPrefix(pathstring, "download") {
-		w.Header().Set("Content-Type", "application/zip")
-		w.Header().Set("Content-Disposition", "attachment; filename=\"uploads.zip\"")
-//		w.WriteHeader(http.StatusFound)
-		zw := zip.NewWriter(w)
-		var up Upload
-
-		results := q.Run(c)
-		for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up){
-			stamp := up.Timestamp.Time().Format(time.RFC3339)
-//			part := strings.SplitN(up.KUemail,"@",2)[0]
-			name := strings.Replace(up.Name+"_"+up.KUemail," ","_", -1)
-			name = strings.Replace(name,"/","+", -1)
-
-			name = name+"/"+stamp+"_" + key.StringID()+"/"
-
-			fw, ferr := zw.Create(name+"comments.txt")
-			check(ferr)
-			io.WriteString(fw, up.Comments)
-			io.WriteString(fw, "\n\n"+up.Name+" ("+up.KUemail+")\n")
-
-			fw, ferr = zw.Create(name+"report.pdf")
-			check(ferr)
-			fw.Write(up.PdfFile)
-
-			fw, ferr = zw.Create(name+"src.zip")
-			check(ferr)
-			fw.Write(up.SrcZip)
-			//dw.Close()
-		}
-		zw.Close()
-		return
-	}
 
 	// var ups []*Upload
 	// _, err := q.GetAll(c, &ups)
@@ -219,6 +185,51 @@ func admin(w http.ResponseWriter, r *http.Request) {
 
         err := adminTemplate.Execute(w, uploads);
         check(err)
+}
+
+
+func download(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	u := user.Current(c)
+	if u == nil {
+		url, err := user.LoginURL(c, r.URL.String())
+		check(err)
+		w.Header().Set("Location", url)
+		w.WriteHeader(http.StatusFound)
+		return
+	}
+	q := datastore.NewQuery("Upload").Order("Timestamp").Order("KUemail")
+
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"uploads.zip\"")
+	//		w.WriteHeader(http.StatusFound)
+	zw := zip.NewWriter(w)
+	var up Upload
+
+	results := q.Run(c)
+	for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up){
+		stamp := up.Timestamp.Time().Format(time.RFC3339)
+		//			part := strings.SplitN(up.KUemail,"@",2)[0]
+		name := strings.Replace(up.Name+"_"+up.KUemail," ","_", -1)
+		name = strings.Replace(name,"/","+", -1)
+		
+		name = name+"/"+stamp+"_" + key.StringID()+"/"
+		
+		fw, ferr := zw.Create(name+"comments.txt")
+		check(ferr)
+		io.WriteString(fw, up.Comments)
+		io.WriteString(fw, "\n\n"+up.Name+" ("+up.KUemail+")\n")
+		
+		fw, ferr = zw.Create(name+"report.pdf")
+		check(ferr)
+		fw.Write(up.PdfFile)
+		
+		fw, ferr = zw.Create(name+"src.zip")
+		check(ferr)
+		fw.Write(up.SrcZip)
+		//dw.Close()
+	}
+	zw.Close()
 }
 
 
