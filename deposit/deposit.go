@@ -100,8 +100,10 @@ func upload(w http.ResponseWriter, r *http.Request) {
                 Subject: "You upload is registered with the File Notary",
                 Body:    fmt.Sprintf(uploadMessage, up.Name, url),
         }
-	err = mail.Send(c, msg)
-	check(err)
+	mail.Send(c, msg)
+	//Ignore if the sending of mail goes wrong
+	//check(err)
+	
 
         // Redirect to /upload/ using the key.
         http.Redirect(w, r, viewPath+key.StringID(), http.StatusFound)
