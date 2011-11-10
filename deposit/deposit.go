@@ -12,7 +12,8 @@ import (
         "template"
         "time"
 //	"strconv"
-	"strings"
+//	"strings"
+	"regexp"
 )
 
 // These imports were added for deployment on App Engine.
@@ -49,6 +50,29 @@ type Upload struct {
         SrcZip    []byte
 }
 
+var nameValidator = regexp.MustCompile("[^a-zA-Z0-9_:@]")
+func safeName(name string) (string) {
+	return nameValidator.ReplaceAllString(name, "_")
+}
+
+var emailValidator = regexp.MustCompile("^[a-zA-Z0-9]+@[a-z.A-Z0-9]+ku.dk$")
+func validate(r *http.Request) (name string, kuemail string) {
+	if name := r.FormValue("name"); name == "" {
+		panic(os.NewError("Please provide a name"))
+	}
+	if kuemail := r.FormValue("kuemail"); !emailValidator.MatchString(kuemail) {
+		panic(os.NewError("Please provide a prober email"))
+	}
+	if _, _, err := r.FormFile("pdffile"); err != nil {
+		panic(os.NewError("Please provide a PDF file"))
+	}
+	if _, _, err := r.FormFile("zipfile"); err != nil {
+		panic(os.NewError("Please provide a zip file"))
+	}
+	return
+}
+
+
 // upload is the HTTP handler for uploading deposits; it handles "/".
 func upload(w http.ResponseWriter, r *http.Request) {
         if r.Method != "POST" {
@@ -56,15 +80,12 @@ func upload(w http.ResponseWriter, r *http.Request) {
                 uploadTemplate.Execute(w, nil)
                 return
         }
+	name, kuemail := validate(r)
 
-        pdf, _, err := r.FormFile("pdffile")
-        check(err)
+	pdf, _, _ :=  r.FormFile("pdffile")
+	zip, _, _ :=  r.FormFile("zipfile")
         defer pdf.Close()
-
-        zip, _, err := r.FormFile("zipfile")
-        check(err)
         defer zip.Close()
-
 
         // Grab the pdf data
         var pdfbuf bytes.Buffer
@@ -75,8 +96,8 @@ func upload(w http.ResponseWriter, r *http.Request) {
         io.Copy(&zipbuf, zip)
 
         up := Upload{
-        Name: r.FormValue("name"),
-        KUemail: r.FormValue("kuemail"),
+        Name: name,
+        KUemail: kuemail,
         Comments: r.FormValue("comments"),
         Timestamp: datastore.SecondsToTime(time.Seconds()),
         PdfFile: pdfbuf.Bytes(),
@@ -90,7 +111,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
         // Save the upload under a (hopefully) unique key, a hash of
         // the data
         key := datastore.NewKey(c, "Upload", keyOf(&up), 0, nil)
-        _, err = datastore.Put(c, key, &up)
+        _, err := datastore.Put(c, key, &up)
         check(err)
 
 	url := "http://filenotary.appspot.com"+viewPath+key.StringID()
@@ -225,8 +246,7 @@ func download(w http.ResponseWriter, r *http.Request) {
 	for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up){
 		stamp := up.Timestamp.Time().Format(time.RFC3339)
 		//			part := strings.SplitN(up.KUemail,"@",2)[0]
-		name := strings.Replace(up.Name+"_"+up.KUemail," ","_", -1)
-		name = strings.Replace(name,"/","+", -1)
+		name := safeName(up.Name+"_"+up.KUemail)
 		
 		name = name+"/"+stamp+"_" + key.StringID()+"/"
 		
