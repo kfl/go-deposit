@@ -143,15 +143,30 @@ func showupload(w http.ResponseWriter, r *http.Request) {
         err := datastore.Get(c, key, up)
         check(err)
 
+	pdfSha, zipSha := shaOf(up.PdfFile, up.SrcZip)
+
         m := map[string]interface{}{
 		"Name": up.Name, 
 		"Time": up.Timestamp.Time().Format(time.RFC850), 
 		"Key": keystring,
+		"PdfSha": pdfSha,
+		"ZipSha": zipSha,
 	}
 
         err = viewTemplate.Execute(w, m);
         check(err)
 }
+
+func shaOf(pdfFile []byte, srcZip []byte) (string, string){
+	sha := sha1.New()
+	sha.Write(pdfFile)
+	pdfSha := fmt.Sprintf("%x", sha.Sum())
+ 	sha.Reset()
+	sha.Write(srcZip)
+	zipSha := fmt.Sprintf("%x", sha.Sum())
+	return pdfSha, zipSha
+}
+
 
 func admin(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
