@@ -55,7 +55,7 @@ func safeName(name string) (string) {
 	return nameValidator.ReplaceAllString(name, "_")
 }
 
-var emailValidator = regexp.MustCompile("^[a-zA-Z0-9]+@[a-z.A-Z0-9]+ku.dk$")
+var emailValidator = regexp.MustCompile("^[a-zA-Z0-9]+@[a-z.A-Z0-9]*ku.dk$")
 func validate(r *http.Request) (name string, kuemail string) {
 	if name := r.FormValue("name"); name == "" {
 		panic(os.NewError("Please provide a name"))
