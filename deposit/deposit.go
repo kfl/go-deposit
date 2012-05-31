@@ -45,7 +45,7 @@ type Upload struct {
 	Name      string
 	KUemail   string
 	Comments  string
-	Timestamp datastore.Time
+	Timestamp time.Time
 	PdfFile   []byte
 	SrcZip    []byte
 }
@@ -100,7 +100,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		Name:      name,
 		KUemail:   kuemail,
 		Comments:  r.FormValue("comments"),
-		Timestamp: datastore.SecondsToTime(time.Now()),
+		Timestamp: time.Now(),
 		PdfFile:   pdfbuf.Bytes(),
 		SrcZip:    zipbuf.Bytes(),
 	}
@@ -166,7 +166,7 @@ func showupload(w http.ResponseWriter, r *http.Request) {
 
 	m := map[string]interface{}{
 		"Name":   up.Name,
-		"Time":   up.Timestamp.Time().Format(time.RFC850),
+		"Time":   up.Timestamp.Format(time.RFC850),
 		"Key":    keystring,
 		"PdfSha": pdfSha,
 		"ZipSha": zipSha,
@@ -209,7 +209,7 @@ func admin(w http.ResponseWriter, r *http.Request) {
 	for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up) {
 		m := map[string]interface{}{
 			"Name":  up.Name,
-			"Time":  up.Timestamp.Time().Format(time.RFC822),
+			"Time":  up.Timestamp.Format(time.RFC822),
 			"Email": up.KUemail,
 			"Key":   key.StringID(),
 		}
@@ -240,7 +240,7 @@ func download(w http.ResponseWriter, r *http.Request) {
 
 	results := q.Run(c)
 	for key, err := results.Next(&up); err != datastore.Done; key, err = results.Next(&up) {
-		stamp := up.Timestamp.Time().Format(time.RFC3339)
+		stamp := up.Timestamp.Format(time.RFC3339)
 		//			part := strings.SplitN(up.KUemail,"@",2)[0]
 		name := safeName(up.Name + "_" + up.KUemail)
 
