@@ -63,7 +63,7 @@ func validate(r *http.Request) (name string, kuemail string) {
 		panic(errors.New("Please provide a name"))
 	}
 	if kuemail := r.FormValue("kuemail"); !emailValidator.MatchString(kuemail) {
-		panic(errors.New("Please provide a prober email"))
+		panic(errors.New("Please provide a prober KU email"))
 	}
 	if _, _, err := r.FormFile("pdffile"); err != nil {
 		panic(errors.New("Please provide a PDF file"))
