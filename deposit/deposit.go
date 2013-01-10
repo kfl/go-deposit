@@ -3,7 +3,7 @@ package deposit
 
 import (
 	"archive/zip"
-	"bytes"
+//	"bytes"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -19,6 +19,7 @@ import (
 // These imports were added for deployment on App Engine.
 import (
 	"appengine"
+	"appengine/blobstore"
 	"appengine/datastore"
 	"appengine/mail"
 	"appengine/user"
@@ -35,9 +36,10 @@ const viewPath = "/upload/"
 
 func init() {
 	http.HandleFunc("/", errorHandler(upload))
+	http.HandleFunc("/addupload", errorHandler(addupload))
+	http.HandleFunc(viewPath, errorHandler(showupload))
 	http.HandleFunc("/admin/", errorHandler(admin))
 	http.HandleFunc("/admin/download", errorHandler(download))
-	http.HandleFunc(viewPath, errorHandler(showupload))
 }
 
 // Upload is the type used to hold the uploaded data in the datastore.
@@ -46,8 +48,8 @@ type Upload struct {
 	KUemail   string
 	Comments  string
 	Timestamp time.Time
-	PdfFile   []byte
-	SrcZip    []byte
+	PdfFile   appengine.BlobKey
+	SrcZip    appengine.BlobKey
 }
 
 var nameValidator = regexp.MustCompile("[^a-zA-Z0-9_:@]")
@@ -59,6 +61,9 @@ func safeName(name string) string {
 var emailValidator = regexp.MustCompile("^[a-zA-Z0-9]+@[a-z.A-Z0-9]*ku.dk$")
 
 func validate(r *http.Request) (name string, kuemail string) {
+	_, _, err := blobstore.ParseUpload(r)
+	check(err)
+
 	if name := r.FormValue("name"); name == "" {
 		panic(errors.New("Please provide a name"))
 	}
@@ -74,35 +79,50 @@ func validate(r *http.Request) (name string, kuemail string) {
 	return
 }
 
-// upload is the HTTP handler for uploading deposits; it handles "/".
+// upload is the HTTP handler for "/".
 func upload(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		// No upload; show the upload form.
-		uploadTemplate.Execute(w, nil)
-		return
+	// No upload; show the upload form.
+	c := appengine.NewContext(r)
+	uploadURL, err := blobstore.UploadURL(c, "/addupload", nil)
+	check(err)
+
+	err = uploadTemplate.Execute(w, uploadURL)
+	check(err)
+}
+
+
+// add
+func addupload(w http.ResponseWriter, r *http.Request) {
+//	name, kuemail := validate(r)
+
+	blobs, others, err := blobstore.ParseUpload(r)
+	check(err)
+
+	var name string
+	var kuemail string
+	if name = others.Get("name"); name == "" {
+		panic(errors.New("Please provide a name"))
 	}
-	name, kuemail := validate(r)
+	if kuemail = others.Get("kuemail"); !emailValidator.MatchString(kuemail) {
+		panic(errors.New("Please provide a prober KU email"))
+	}
+	if len(blobs["pdffile"]) == 0 {
+		panic(errors.New("Please provide a PDF file"))
+	}
+	if len(blobs["zipfile"]) == 0 {
+		panic(errors.New("Please provide a zip file"))
+	}
 
-	pdf, _, _ := r.FormFile("pdffile")
-	zip, _, _ := r.FormFile("zipfile")
-	defer pdf.Close()
-	defer zip.Close()
-
-	// Grab the pdf data
-	var pdfbuf bytes.Buffer
-	io.Copy(&pdfbuf, pdf)
-
-	// Grab the zip data
-	var zipbuf bytes.Buffer
-	io.Copy(&zipbuf, zip)
+	pdffile := blobs["pdffile"]
+	zipfile := blobs["zipfile"]
 
 	up := Upload{
 		Name:      name,
 		KUemail:   kuemail,
 		Comments:  r.FormValue("comments"),
 		Timestamp: time.Now(),
-		PdfFile:   pdfbuf.Bytes(),
-		SrcZip:    zipbuf.Bytes(),
+		PdfFile:   pdffile[0].BlobKey, //pdfbuf.Bytes(),
+		SrcZip:    zipfile[0].BlobKey, //zipbuf.Bytes(),
 	}
 
 	// Create an App Engine context for the client's request.
@@ -110,8 +130,8 @@ func upload(w http.ResponseWriter, r *http.Request) {
 
 	// Save the upload under a (hopefully) unique key, a hash of
 	// the data
-	key := datastore.NewKey(c, "Upload", keyOf(&up), 0, nil)
-	_, err := datastore.Put(c, key, &up)
+	key := datastore.NewKey(c, "Upload", keyOf(c, &up), 0, nil)
+	_, err = datastore.Put(c, key, &up)
 	check(err)
 
 	url := "http://filenotary.appspot.com" + viewPath + key.StringID()
@@ -131,14 +151,14 @@ func upload(w http.ResponseWriter, r *http.Request) {
 }
 
 // keyOf returns (part of) the SHA-1 hash of the data, as a hex string.
-func keyOf(up *Upload) string {
+func keyOf(c appengine.Context, up *Upload) string {
 	sha := sha1.New()
 	io.WriteString(sha, up.Name)
 	io.WriteString(sha, up.KUemail)
 	io.WriteString(sha, up.Comments)
 	//sha.Write(up.Timestamp)
-	sha.Write(up.PdfFile)
-	sha.Write(up.SrcZip)
+	io.Copy(sha, blobstore.NewReader(c,up.PdfFile))
+	io.Copy(sha, blobstore.NewReader(c,up.SrcZip))
 	return fmt.Sprintf("%x", string(sha.Sum(nil))[0:10])
 }
 
@@ -162,7 +182,7 @@ func showupload(w http.ResponseWriter, r *http.Request) {
 	err := datastore.Get(c, key, up)
 	check(err)
 
-	pdfSha, zipSha := shaOf(up.PdfFile, up.SrcZip)
+	pdfSha, zipSha := shaOf(c, up.PdfFile, up.SrcZip)
 
 	m := map[string]interface{}{
 		"Name":   up.Name,
@@ -176,12 +196,12 @@ func showupload(w http.ResponseWriter, r *http.Request) {
 	check(err)
 }
 
-func shaOf(pdfFile []byte, srcZip []byte) (string, string) {
+func shaOf(c appengine.Context, pdfFile appengine.BlobKey, srcZip appengine.BlobKey) (string, string) {
 	sha := sha1.New()
-	sha.Write(pdfFile)
+	io.Copy(sha, blobstore.NewReader(c, pdfFile))
 	pdfSha := fmt.Sprintf("%x", sha.Sum(nil))
 	sha.Reset()
-	sha.Write(srcZip)
+	io.Copy(sha, blobstore.NewReader(c, srcZip))
 	zipSha := fmt.Sprintf("%x", sha.Sum(nil))
 	return pdfSha, zipSha
 }
@@ -253,11 +273,11 @@ func download(w http.ResponseWriter, r *http.Request) {
 
 		fw, ferr = zw.Create(name + "report.pdf")
 		check(ferr)
-		fw.Write(up.PdfFile)
+//		fw.Write(up.PdfFile)
 
 		fw, ferr = zw.Create(name + "src.zip")
 		check(ferr)
-		fw.Write(up.SrcZip)
+//		fw.Write(up.SrcZip)
 		//dw.Close()
 	}
 	zw.Close()
