@@ -11,6 +11,11 @@ body {
    text-align:center;
 }
 
+pre {
+   background: #EEE;
+   border: 1px solid silver;
+}
+
 div#content {
    width: 750px;
    background: #FFFFFF;

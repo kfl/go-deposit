@@ -187,6 +187,7 @@ func showupload(w http.ResponseWriter, r *http.Request) {
 	m := map[string]interface{}{
 		"Name":   up.Name,
 		"Time":   up.Timestamp.Format(time.RFC850),
+		"Comments": up.Comments,
 		"Key":    keystring,
 		"PdfSha": pdfSha,
 		"ZipSha": zipSha,
