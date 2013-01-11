@@ -119,7 +119,7 @@ func addupload(w http.ResponseWriter, r *http.Request) {
 	up := Upload{
 		Name:      name,
 		KUemail:   kuemail,
-		Comments:  r.FormValue("comments"),
+		Comments:  others.Get("comments"),
 		Timestamp: time.Now(),
 		PdfFile:   pdffile[0].BlobKey, //pdfbuf.Bytes(),
 		SrcZip:    zipfile[0].BlobKey, //zipbuf.Bytes(),
@@ -135,7 +135,7 @@ func addupload(w http.ResponseWriter, r *http.Request) {
 	check(err)
 
 	url := "http://filenotary.appspot.com" + viewPath + key.StringID()
-	addr := r.FormValue("kuemail")
+	addr := kuemail
 	msg := &mail.Message{
 		Sender:  "Ken Friis Larsen <kflarsen@diku.edu>",
 		To:      []string{addr},
@@ -156,7 +156,7 @@ func keyOf(c appengine.Context, up *Upload) string {
 	io.WriteString(sha, up.Name)
 	io.WriteString(sha, up.KUemail)
 	io.WriteString(sha, up.Comments)
-	//sha.Write(up.Timestamp)
+	io.WriteString(sha, up.Timestamp.Format(time.RFC822))
 	io.Copy(sha, blobstore.NewReader(c,up.PdfFile))
 	io.Copy(sha, blobstore.NewReader(c,up.SrcZip))
 	return fmt.Sprintf("%x", string(sha.Sum(nil))[0:10])
