@@ -52,7 +52,7 @@ type Upload struct {
 	SrcZip    appengine.BlobKey
 }
 
-var nameValidator = regexp.MustCompile("[^a-zA-Z0-9_:@]")
+var nameValidator = regexp.MustCompile("[^a-zA-Z0-9._:@]")
 
 func safeName(name string) string {
 	return nameValidator.ReplaceAllString(name, "_")
@@ -272,16 +272,23 @@ func download(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(fw, up.Comments)
 		io.WriteString(fw, "\n\n"+up.Name+" ("+up.KUemail+")\n")
 
-		fw, ferr = zw.Create(name + "report.pdf")
-		check(ferr)
-//		fw.Write(up.PdfFile)
-
-		fw, ferr = zw.Create(name + "src.zip")
-		check(ferr)
-//		fw.Write(up.SrcZip)
-		//dw.Close()
+		addBlobToZip(c, zw, up.PdfFile, name, "report.pdf")
+		addBlobToZip(c, zw, up.SrcZip, name, "src.zip")
 	}
 	zw.Close()
+}
+
+func addBlobToZip(c appengine.Context, zw *zip.Writer, key appengine.BlobKey, path string, defName string) {
+	blobinfo, err := blobstore.Stat(c, key)
+	check(err)
+	fname := safeName(blobinfo.Filename)
+	if len(fname) == 0 {
+		fname = defName
+	}
+
+	fw, ferr := zw.Create(path + fname)
+	check(ferr)
+	io.Copy(fw, blobstore.NewReader(c, key))
 }
 
 // errorHandler wraps the argument handler with an error-catcher that
